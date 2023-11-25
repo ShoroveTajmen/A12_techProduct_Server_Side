@@ -4,7 +4,7 @@ const cors = require("cors");
 const app = express();
 
 const port = process.env.PORT || 5001;
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 //middleware
 const corsOptions = {
@@ -47,6 +47,31 @@ async function run() {
       const item = req.body;
       const result = await productsCollection.insertOne(item);
       res.send(result);
+    })
+
+    //patch method api for upvote
+    app.patch('/upvote/:productId', async (req, res) => {
+        const productId = req.params.productId;
+        const userEmail = req.body.userEmail;
+
+        //check if the user has already upvoted
+        const hasUpVoted = await productsCollection.findOne({
+          _id: new ObjectId(productId),
+          upvotedBy: userEmail,
+        })
+        if(hasUpVoted) {
+          return res.send({message: 'This user already added vote'})
+        }
+
+        //update the upvote count and store the user's email
+        const result = await productsCollection.updateOne(
+          {_id: new ObjectId(productId)},
+          {
+            $inc: {upVote: 1},
+            $addToSet: {upvotedBy: userEmail},
+          }
+        )
+        res.send(result);
     })
 
 
