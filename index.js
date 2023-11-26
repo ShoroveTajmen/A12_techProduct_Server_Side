@@ -36,11 +36,17 @@ async function run() {
 
 
     //products related api
-    //get products
+    //get featured products by sorting real time
     app.get("/products", async (req, res) => {
       const result = await productsCollection.find().sort({ createdAt: -1 }).toArray();
       res.send(result);
     });
+
+    //get trending products by sorting vote count
+    app.get('/productsByVote', async (req,res) => {
+      const result = await productsCollection.find().sort({upVote: -1}).toArray();
+      res.send(result);
+    })
 
     //get specific product id data
     app.get('/products/:id', async (req, res) => {
