@@ -48,6 +48,17 @@ async function run() {
       res.send(result);
     })
 
+    //get product data by tag
+    app.get('/productsByTags', async (req,res) => {
+      const {search} = req.query;
+      let query = {};
+      if(search){
+        query = {tags: {$regex: new RegExp(search, 'i')}};
+      }
+      const result = await productsCollection.find(query).sort({ createdAt: -1 }).toArray();
+      res.send(result);
+    })
+
     //get specific product id data
     app.get('/products/:id', async (req, res) => {
       const id = req.params.id;
