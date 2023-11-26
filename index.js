@@ -16,9 +16,7 @@ app.use(cors(corsOptions));
 //access post body and convert into json format
 app.use(express.json());
 
-
-const uri =
-  `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.es62grd.mongodb.net/?retryWrites=true&w=majority`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.es62grd.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -34,80 +32,89 @@ async function run() {
     //database collections
     const productsCollection = client.db("techProduct").collection("products");
 
-
     //products related api
     //get featured products by sorting real time
     app.get("/products", async (req, res) => {
-      const result = await productsCollection.find().sort({ createdAt: -1 }).toArray();
+      const result = await productsCollection
+        .find()
+        .sort({ createdAt: -1 })
+        .toArray();
       res.send(result);
     });
 
     //get trending products by sorting vote count
-    app.get('/productsByVote', async (req,res) => {
-      const result = await productsCollection.find().sort({upVote: -1}).toArray();
+    app.get("/productsByVote", async (req, res) => {
+      const result = await productsCollection
+        .find()
+        .sort({ upVote: -1 })
+        .toArray();
       res.send(result);
-    })
+    });
+
+    //number of products count
+    app.get("/productsCount", async (req, res) => {
+      const count = await productsCollection.estimatedDocumentCount();
+      res.send({ count });
+    });
 
     //get product data by tag
-    app.get('/productsByTags', async (req,res) => {
-      const {search} = req.query;
+    app.get("/productsByTags", async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      console.log('pagination query', req.query);
+      const { search } = req.query;
       let query = {};
-      if(search){
-        query = {tags: {$regex: new RegExp(search, 'i')}};
+      if (search) {
+        query = { tags: { $regex: new RegExp(search, "i") } };
       }
-      const result = await productsCollection.find(query).sort({ createdAt: -1 }).toArray();
+      const result = await productsCollection
+        .find(query)
+        .skip(page * size)
+        .limit(size)
+        .sort({ createdAt: -1 })
+        .toArray();
       res.send(result);
-    })
+    });
 
     //get specific product id data
-    app.get('/products/:id', async (req, res) => {
+    app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await productsCollection.findOne(query);
       res.send(result);
-    })
+    });
 
     //post new product
-    app.post('/products', async (req, res) => {
+    app.post("/products", async (req, res) => {
       const item = req.body;
       const result = await productsCollection.insertOne(item);
       res.send(result);
-    })
+    });
 
     //patch method api for upvote
-    app.patch('/upvote/:productId', async (req, res) => {
-        const productId = req.params.productId;
-        const userEmail = req.body.userEmail;
+    app.patch("/upvote/:productId", async (req, res) => {
+      const productId = req.params.productId;
+      const userEmail = req.body.userEmail;
 
-        //check if the user has already upvoted
-        const hasUpVoted = await productsCollection.findOne({
-          _id: new ObjectId(productId),
-          upvotedBy: userEmail,
-        })
-        if(hasUpVoted) {
-          return res.send({message: 'This user already added vote'})
+      //check if the user has already upvoted
+      const hasUpVoted = await productsCollection.findOne({
+        _id: new ObjectId(productId),
+        upvotedBy: userEmail,
+      });
+      if (hasUpVoted) {
+        return res.send({ message: "This user already added vote" });
+      }
+
+      //update the upvote count and store the user's email
+      const result = await productsCollection.updateOne(
+        { _id: new ObjectId(productId) },
+        {
+          $inc: { upVote: 1 },
+          $addToSet: { upvotedBy: userEmail },
         }
-
-        //update the upvote count and store the user's email
-        const result = await productsCollection.updateOne(
-          {_id: new ObjectId(productId)},
-          {
-            $inc: {upVote: 1},
-            $addToSet: {upvotedBy: userEmail},
-          }
-        )
-        res.send(result);
-    })
-
-
-
-
-
-
-
-
-
-
+      );
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
@@ -115,7 +122,6 @@ async function run() {
     //   "Pinged your deployment. You successfully connected to MongoDB!"
     // );
   } finally {
-
   }
 }
 run().catch(console.dir);
