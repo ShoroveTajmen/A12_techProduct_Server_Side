@@ -61,7 +61,7 @@ async function run() {
     app.get("/productsByTags", async (req, res) => {
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
-      console.log('pagination query', req.query);
+      console.log("pagination query", req.query);
       const { search } = req.query;
       let query = {};
       if (search) {
@@ -95,7 +95,6 @@ async function run() {
     app.patch("/upvote/:productId", async (req, res) => {
       const productId = req.params.productId;
       const userEmail = req.body.userEmail;
-
       //check if the user has already upvoted
       const hasUpVoted = await productsCollection.findOne({
         _id: new ObjectId(productId),
@@ -104,7 +103,6 @@ async function run() {
       if (hasUpVoted) {
         return res.send({ message: "This user already added vote" });
       }
-
       //update the upvote count and store the user's email
       const result = await productsCollection.updateOne(
         { _id: new ObjectId(productId) },
@@ -113,6 +111,24 @@ async function run() {
           $addToSet: { upvotedBy: userEmail },
         }
       );
+      res.send(result);
+    });
+
+    //patch method for specific product update
+    app.patch("/updateProduct/:id", async (req, res) => {
+      const item = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          description: item.description,
+          link: item.link,
+          productName: item.productName,
+          productPic: item.productPic,
+          tags: item.tags,
+        },
+      };
+      const result = await productsCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
 
