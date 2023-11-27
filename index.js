@@ -42,6 +42,16 @@ async function run() {
       res.send(result);
     });
 
+    //get product by specific email
+    app.get("/userProducts", async (req, res) => {
+      const { userEmail } = req.query;
+      const result = await productsCollection
+        .find({ OwnerEmail: userEmail })
+        .sort({ createdAt: -1 })
+        .toArray();
+      res.send(result);
+    });
+
     //get trending products by sorting vote count
     app.get("/productsByVote", async (req, res) => {
       const result = await productsCollection
@@ -132,15 +142,13 @@ async function run() {
       res.send(result);
     });
 
-
     //delete specific product
-    app.delete('/product/:id', async(req, res) => {
+    app.delete("/product/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const result = await productsCollection.deleteOne(query);
       res.send(result);
-    })
-
+    });
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
