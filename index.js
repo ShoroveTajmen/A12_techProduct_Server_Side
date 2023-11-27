@@ -32,9 +32,8 @@ async function run() {
   try {
     //database collections
     const productsCollection = client.db("techProduct").collection("products");
-    const featuredProductsCollection = client
-      .db("techProduct")
-      .collection("featuredProduct");
+    const featuredProductsCollection = client.db("techProduct").collection("featuredProduct");
+   const reviewProductsCollection = client.db("techProduct").collection("reviewProduct");
 
     //jwt related api
     app.post("/jwt", async (req, res) => {
@@ -232,12 +231,33 @@ async function run() {
     });
 
     //reported product API
-
+    //get method to load only reported products data
+    app.get('/reportedPoducts', async(req, res) => {
+      const result = await productsCollection.find({reported: true}).toArray();
+      res.send(result);
+    })
 
     //patch method to set reported value true
     app.patch('/reportProduct/:id', async(req, res) => {
       const productId = req.params.id;
       const result = await productsCollection.updateOne({_id: new ObjectId(productId)}, {$set: {reported: true}});
+      res.send(result);
+    })
+
+    //product review related api
+    //get specific products reviews
+    app.get("/productReview/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { pId: id };
+      const result = await reviewProductsCollection.find(query).toArray();
+      res.send(result);
+    });
+    
+    //post specific product reviews
+    app.post('/productReview', async (req, res) => {
+      const review = req.body;
+      console.log(review);
+      const result = await reviewProductsCollection.insertOne(review);
       res.send(result);
     })
 
