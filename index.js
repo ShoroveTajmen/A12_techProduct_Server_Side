@@ -76,6 +76,14 @@ async function run() {
         .toArray();
       res.send(result);
     });
+    //get all products data by sorting status
+    app.get("/allProducts", async (req, res) => {
+      const result = await productsCollection
+        .find()
+        .sort({status: -1, createdAt: -1 })
+        .toArray();
+      res.send(result);
+    });
 
     //get product by specific email
     app.get("/userProducts", async (req, res) => {
@@ -129,6 +137,8 @@ async function run() {
       res.send(result);
     });
 
+
+
     //post new product
     app.post("/products", async (req, res) => {
       const item = req.body;
@@ -176,6 +186,28 @@ async function run() {
       const result = await productsCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
+
+
+    //patch api to update product status accepted
+    app.patch('/updateProductStatus1/:id', async(req,res) => {
+      const id = req.params;
+      const {status} = req.body;
+      const result = await productsCollection.updateOne(
+        {_id: new ObjectId(id)},
+        {$set: {status}}
+      )
+      res.send(result);
+    })
+    //patch api to update product status rejected
+    app.patch('/updateProductStatus2/:id', async(req,res) => {
+      const id = req.params;
+      const {status} = req.body;
+      const result = await productsCollection.updateOne(
+        {_id: new ObjectId(id)},
+        {$set: {status}}
+      )
+      res.send(result);
+    })
 
     //delete specific product
     app.delete("/product/:id", async (req, res) => {
