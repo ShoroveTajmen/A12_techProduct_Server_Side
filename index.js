@@ -32,41 +32,37 @@ async function run() {
   try {
     //database collections
     const productsCollection = client.db("techProduct").collection("products");
+    const featuredProductsCollection = client
+      .db("techProduct")
+      .collection("featuredProduct");
 
     //jwt related api
-    app.post('/jwt', async(req, res) => {
+    app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: '1h'
+        expiresIn: "1h",
       });
-      res.send({token})
-    })
+      res.send({ token });
+    });
 
     //verify token middleware
     const verifyToken = (req, res, next) => {
-      console.log('inside verify token',req.headers.authorization);
-      if(!req.headers.authorization){
-        return res.status(401).send({message: 'forbidden access'});
+      console.log("inside verify token", req.headers.authorization);
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "forbidden access" });
       }
       //token get from header and header from localstorage
-      const token =  req.headers.authorization.split(' ')[1];
+      const token = req.headers.authorization.split(" ")[1];
       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-        if(err){
-          return res.status(401).send({message: 'unauthorized'})
+        if (err) {
+          return res.status(401).send({ message: "unauthorized" });
         }
         req.decoded = decoded;
         next();
-      })
+      });
       // next();
-    }
-    
-    
-    
-    
-    
-    
-    
-    
+    };
+
     //products related api
     //get featured products by sorting real time
     app.get("/products", async (req, res) => {
@@ -80,7 +76,7 @@ async function run() {
     app.get("/allProducts", async (req, res) => {
       const result = await productsCollection
         .find()
-        .sort({status: -1, createdAt: -1 })
+        .sort({ status: -1, createdAt: -1 })
         .toArray();
       res.send(result);
     });
@@ -137,8 +133,6 @@ async function run() {
       res.send(result);
     });
 
-
-
     //post new product
     app.post("/products", async (req, res) => {
       const item = req.body;
@@ -187,27 +181,26 @@ async function run() {
       res.send(result);
     });
 
-
     //patch api to update product status accepted
-    app.patch('/updateProductStatus1/:id', async(req,res) => {
+    app.patch("/updateProductStatus1/:id", async (req, res) => {
       const id = req.params;
-      const {status} = req.body;
+      const { status } = req.body;
       const result = await productsCollection.updateOne(
-        {_id: new ObjectId(id)},
-        {$set: {status}}
-      )
+        { _id: new ObjectId(id) },
+        { $set: { status } }
+      );
       res.send(result);
-    })
+    });
     //patch api to update product status rejected
-    app.patch('/updateProductStatus2/:id', async(req,res) => {
+    app.patch("/updateProductStatus2/:id", async (req, res) => {
       const id = req.params;
-      const {status} = req.body;
+      const { status } = req.body;
       const result = await productsCollection.updateOne(
-        {_id: new ObjectId(id)},
-        {$set: {status}}
-      )
+        { _id: new ObjectId(id) },
+        { $set: { status } }
+      );
       res.send(result);
-    })
+    });
 
     //delete specific product
     app.delete("/product/:id", async (req, res) => {
@@ -216,6 +209,37 @@ async function run() {
       const result = await productsCollection.deleteOne(query);
       res.send(result);
     });
+
+    //Featured Product related API
+    //get method for get featured product
+    app.get("/featuredProducts", async (req, res) => {
+      const result = await featuredProductsCollection
+        .find()
+        .sort({ createdAt: -1 })
+        .toArray();
+      res.send(result);
+    });
+
+    //post method for stored featured product in the database
+    app.post("/marksFeatured/:id", async (req, res) => {
+      const { id } = req.params;
+      //retrive the product from the productsCollection
+      const product = await productsCollection.findOne({
+        _id: new ObjectId(id),
+      });
+      const result = await featuredProductsCollection.insertOne(product);
+      res.send(result);
+    });
+
+    //reported product API
+
+
+    //patch method to set reported value true
+    app.patch('/reportProduct/:id', async(req, res) => {
+      const productId = req.params.id;
+      const result = await productsCollection.updateOne({_id: new ObjectId(productId)}, {$set: {reported: true}});
+      res.send(result);
+    })
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
