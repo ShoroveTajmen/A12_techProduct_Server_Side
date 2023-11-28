@@ -41,7 +41,7 @@ async function run() {
     const usersCollection = client.db("techProduct").collection("users");
     const paymentsCollection = client.db("techProduct").collection("payments");
 
-    //jwt related api
+    //*****jwt related api****
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
@@ -80,7 +80,7 @@ async function run() {
       next();
     };
 
-    //users related API
+    //******users related API*****
     //get all users data
     app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
@@ -154,7 +154,7 @@ async function run() {
       res.send(result);
     });
 
-    //products related api
+    //******products related api******
     //get featured products by sorting real time
     app.get("/products", async (req, res) => {
       const result = await productsCollection
@@ -301,7 +301,7 @@ async function run() {
       res.send(result);
     });
 
-    //Featured Product related API
+    //*****Featured Product related API*****
     //get method for get featured product
     app.get("/featuredProducts", async (req, res) => {
       const result = await featuredProductsCollection
@@ -322,7 +322,7 @@ async function run() {
       res.send(result);
     });
 
-    //reported product API
+    //*****reported product API******
     //get method to load only reported products data
     app.get("/reportedPoducts", async (req, res) => {
       const result = await productsCollection
@@ -341,7 +341,7 @@ async function run() {
       res.send(result);
     });
 
-    //product review related api
+    //*****product review related api*****
     //get specific products reviews
     app.get("/productReview/:id", async (req, res) => {
       const id = req.params.id;
@@ -358,8 +358,9 @@ async function run() {
       res.send(result);
     });
 
-    //******payment intent related API related API*****
 
+
+    //******payment intent related API related API*****
     //get specific email related payment history
     app.get("/payments/:email",  async (req, res) => {
       const query = { email: req.params.email };
@@ -389,6 +390,17 @@ async function run() {
       console.log("payment info", payment);
       res.send(paymentResult);
     });
+
+
+    //stats or analytics
+    app.get('/admin-stats', verifyToken, verifyAdmin, async(req, res)=> {
+      const users = await usersCollection.estimatedDocumentCount();
+      const allProducts = await productsCollection.estimatedDocumentCount();
+      const reviews = await reviewProductsCollection.estimatedDocumentCount();
+
+      res.send([users, allProducts, reviews ])
+    })
+
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
