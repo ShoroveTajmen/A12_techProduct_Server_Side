@@ -32,8 +32,13 @@ async function run() {
   try {
     //database collections
     const productsCollection = client.db("techProduct").collection("products");
-    const featuredProductsCollection = client.db("techProduct").collection("featuredProduct");
-   const reviewProductsCollection = client.db("techProduct").collection("reviewProduct");
+    const featuredProductsCollection = client
+      .db("techProduct")
+      .collection("featuredProduct");
+    const reviewProductsCollection = client
+      .db("techProduct")
+      .collection("reviewProduct");
+    const usersCollection = client.db("techProduct").collection("users");
 
     //jwt related api
     app.post("/jwt", async (req, res) => {
@@ -48,7 +53,7 @@ async function run() {
     const verifyToken = (req, res, next) => {
       console.log("inside verify token", req.headers.authorization);
       if (!req.headers.authorization) {
-        return res.status(401).send({ message: "forbidden access" });
+        return res.status(401).send({ message: "unauthorized access" });
       }
       //token get from header and header from localstorage
       const token = req.headers.authorization.split(" ")[1];
@@ -61,6 +66,87 @@ async function run() {
       });
       // next();
     };
+
+    //use verify admin after verifyToken
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const isAdmin = user?.role === "admin";
+      if (!isAdmin) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
+    //users related API
+    //get all users data
+    app.get("/users", verifyToken,verifyAdmin, async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === "admin";
+      }
+      res.send({ admin });
+    });
+
+    //post email and pass in database
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      //insert email if user doesn't exists:
+      //you can do this many ways (1. email uniqque, 2. upsert, 3.simple checking)
+      const query = { email: user.email };
+      const existingUser = await usersCollection.findOne(query);
+      if (existingUser) {
+        return res.send({ message: "user already exists", insertedId: null });
+      }
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
+
+    //patch method for set user role to admin
+    app.patch("/users/admin/:id",verifyToken,verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role: "admin",
+        },
+      };
+      const result = await usersCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+    //patch method for set user role to moderator
+    app.patch("/users/moderator/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role: "moderator",
+        },
+      };
+      const result = await usersCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    //users delete api
+    app.delete("/users/:id",verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await usersCollection.deleteOne(query);
+      res.send(result);
+    });
 
     //products related api
     //get featured products by sorting real time
@@ -232,17 +318,22 @@ async function run() {
 
     //reported product API
     //get method to load only reported products data
-    app.get('/reportedPoducts', async(req, res) => {
-      const result = await productsCollection.find({reported: true}).toArray();
+    app.get("/reportedPoducts", async (req, res) => {
+      const result = await productsCollection
+        .find({ reported: true })
+        .toArray();
       res.send(result);
-    })
+    });
 
     //patch method to set reported value true
-    app.patch('/reportProduct/:id', async(req, res) => {
+    app.patch("/reportProduct/:id", async (req, res) => {
       const productId = req.params.id;
-      const result = await productsCollection.updateOne({_id: new ObjectId(productId)}, {$set: {reported: true}});
+      const result = await productsCollection.updateOne(
+        { _id: new ObjectId(productId) },
+        { $set: { reported: true } }
+      );
       res.send(result);
-    })
+    });
 
     //product review related api
     //get specific products reviews
@@ -252,14 +343,14 @@ async function run() {
       const result = await reviewProductsCollection.find(query).toArray();
       res.send(result);
     });
-    
+
     //post specific product reviews
-    app.post('/productReview', async (req, res) => {
+    app.post("/productReview", async (req, res) => {
       const review = req.body;
       console.log(review);
       const result = await reviewProductsCollection.insertOne(review);
       res.send(result);
-    })
+    });
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
