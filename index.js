@@ -3,7 +3,7 @@ require("dotenv").config();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const app = express();
-
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5001;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
@@ -39,6 +39,7 @@ async function run() {
       .db("techProduct")
       .collection("reviewProduct");
     const usersCollection = client.db("techProduct").collection("users");
+    const paymentsCollection = client.db("techProduct").collection("payments");
 
     //jwt related api
     app.post("/jwt", async (req, res) => {
@@ -81,7 +82,7 @@ async function run() {
 
     //users related API
     //get all users data
-    app.get("/users", verifyToken,verifyAdmin, async (req, res) => {
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
@@ -116,17 +117,22 @@ async function run() {
     });
 
     //patch method for set user role to admin
-    app.patch("/users/admin/:id",verifyToken,verifyAdmin, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updateDoc = {
-        $set: {
-          role: "admin",
-        },
-      };
-      const result = await usersCollection.updateOne(filter, updateDoc);
-      res.send(result);
-    });
+    app.patch(
+      "/users/admin/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = {
+          $set: {
+            role: "admin",
+          },
+        };
+        const result = await usersCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      }
+    );
     //patch method for set user role to moderator
     app.patch("/users/moderator/:id", async (req, res) => {
       const id = req.params.id;
@@ -141,7 +147,7 @@ async function run() {
     });
 
     //users delete api
-    app.delete("/users/:id",verifyToken, verifyAdmin, async (req, res) => {
+    app.delete("/users/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await usersCollection.deleteOne(query);
@@ -350,6 +356,38 @@ async function run() {
       console.log(review);
       const result = await reviewProductsCollection.insertOne(review);
       res.send(result);
+    });
+
+    //******payment intent related API related API*****
+
+    //get specific email related payment history
+    app.get("/payments/:email",  async (req, res) => {
+      const query = { email: req.params.email };
+      const result = await paymentsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      console.log("amount inside the intent", amount);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    //post the payment history
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const paymentResult = await paymentsCollection.insertOne(payment);
+      console.log("payment info", payment);
+      res.send(paymentResult);
     });
 
     // Send a ping to confirm a successful connection
