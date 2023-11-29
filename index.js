@@ -8,12 +8,13 @@ const port = process.env.PORT || 5001;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 //middleware
-const corsOptions = {
-  origin: "*",
-  credentials: true,
-  optionSuccessStatus: 200,
-};
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "https://disillusioned-queen.surge.sh"],
+    credentials: true,
+  })
+);
+
 //access post body and convert into json format
 app.use(express.json());
 
@@ -79,6 +80,17 @@ async function run() {
       }
       next();
     };
+    //use verify moderator after verifyToken
+    const verifyModerator = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const isModerator = user?.role === "moderator";
+      if (!isModerator) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
 
     //******users related API*****
     //get all users data
@@ -87,7 +99,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+    app.get("/users/admin/:email",verifyToken,  async (req, res) => {
       const email = req.params.email;
       if (email !== req.decoded.email) {
         return res.status(403).send({ message: "forbidden access" });
@@ -100,6 +112,21 @@ async function run() {
         admin = user?.role === "admin";
       }
       res.send({ admin });
+    });
+
+    app.get("/users/moderator/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      let moderator = false;
+      if (user) {
+        moderator = user?.role === "moderator";
+      }
+      res.send({ moderator });
     });
 
     //post email and pass in database
@@ -203,9 +230,9 @@ async function run() {
       const size = parseInt(req.query.size);
       console.log("pagination query", req.query);
       const { search } = req.query;
-      let query = {};
+      let query = {status: "accepted",};
       if (search) {
-        query = { tags: { $regex: new RegExp(search, "i") } };
+        query.tags = {  $regex: new RegExp(search, "i") };
       }
       const result = await productsCollection
         .find(query)
