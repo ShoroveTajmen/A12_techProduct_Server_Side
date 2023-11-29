@@ -8,12 +8,7 @@ const port = process.env.PORT || 5001;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 //middleware
-app.use(
-  cors({
-    origin: ["http://localhost:5173", "https://disillusioned-queen.surge.sh"],
-    credentials: true,
-  })
-);
+app.use(cors());
 
 //access post body and convert into json format
 app.use(express.json());
@@ -41,6 +36,7 @@ async function run() {
       .collection("reviewProduct");
     const usersCollection = client.db("techProduct").collection("users");
     const paymentsCollection = client.db("techProduct").collection("payments");
+    const couponsCollection = client.db("techProduct").collection("coupons");
 
     //*****jwt related api****
     app.post("/jwt", async (req, res) => {
@@ -99,7 +95,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users/admin/:email",verifyToken,  async (req, res) => {
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       if (email !== req.decoded.email) {
         return res.status(403).send({ message: "forbidden access" });
@@ -230,9 +226,9 @@ async function run() {
       const size = parseInt(req.query.size);
       console.log("pagination query", req.query);
       const { search } = req.query;
-      let query = {status: "accepted",};
+      let query = { status: "accepted" };
       if (search) {
-        query.tags = {  $regex: new RegExp(search, "i") };
+        query.tags = { $regex: new RegExp(search, "i") };
       }
       const result = await productsCollection
         .find(query)
@@ -313,9 +309,9 @@ async function run() {
     app.delete("/deleteProduct/:id", async (req, res) => {
       const id = req.params.id;
       const { status } = req.body;
-      const result = await productsCollection.deleteOne(
-        { _id: new ObjectId(id) }
-      );
+      const result = await productsCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
       res.send(result);
     });
 
@@ -384,11 +380,9 @@ async function run() {
       res.send(result);
     });
 
-
-
     //******payment intent related API related API*****
     //get specific email related payment history
-    app.get("/payments/:email",  async (req, res) => {
+    app.get("/payments/:email", async (req, res) => {
       const query = { email: req.params.email };
       const result = await paymentsCollection.find(query).toArray();
       res.send(result);
@@ -417,16 +411,22 @@ async function run() {
       res.send(paymentResult);
     });
 
-
     //stats or analytics
-    app.get('/admin-stats', verifyToken, verifyAdmin, async(req, res)=> {
+    app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
       const users = await usersCollection.estimatedDocumentCount();
       const allProducts = await productsCollection.estimatedDocumentCount();
       const reviews = await reviewProductsCollection.estimatedDocumentCount();
 
-      res.send([users, allProducts, reviews ])
-    })
+      res.send([users, allProducts, reviews]);
+    });
 
+    //*****Coupons related API *******/
+    //post new coupon
+    app.post("/coupons", async (req, res) => {
+      const item = req.body;
+      const result = await couponsCollection.insertOne(item);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
