@@ -427,7 +427,7 @@ async function run() {
     });
 
     //get specific product id data
-    app.get("/coupons/:id",  async (req, res) => {
+    app.get("/coupons/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await couponsCollection.findOne(query);
@@ -452,11 +452,36 @@ async function run() {
           code: item.code,
           date: item.date,
           description: item.description,
-      
         },
       };
       const result = await couponsCollection.updateOne(filter, updatedDoc);
       res.send(result);
+    });
+
+    //post method for get coupon discount
+    app.post("/validateCoupon", async (req, res) => {
+      const { code } = req.body;
+        // Find the coupon in the database based on the code
+        const coupon = await couponsCollection.findOne({ code });
+
+        if (coupon) {
+          // Check if the coupon is still valid based on the expiration date or any other criteria
+          const currentDate = new Date();
+          const couponExpirationDate = new Date(coupon.date);
+
+          if (currentDate <= couponExpirationDate) {
+            // Calculate the discounted amount (replace this with your actual logic)
+            const discountedAmount = 0.5 * parseFloat(coupon.amount);
+
+            res.json({ valid: true, discountedAmount });
+          } else {
+            // Coupon has expired
+            res.json({ valid: false, message: "Coupon has expired" });
+          }
+        } else {
+          // Coupon not found
+          res.json({ valid: false, message: "Invalid coupon code" });
+        }
     });
 
     //coupon delete api
