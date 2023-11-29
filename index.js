@@ -310,12 +310,11 @@ async function run() {
       res.send(result);
     });
     //patch api to update product status rejected
-    app.patch("/updateProductStatus2/:id", async (req, res) => {
-      const id = req.params;
+    app.delete("/deleteProduct/:id", async (req, res) => {
+      const id = req.params.id;
       const { status } = req.body;
-      const result = await productsCollection.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: { status } }
+      const result = await productsCollection.deleteOne(
+        { _id: new ObjectId(id) }
       );
       res.send(result);
     });
