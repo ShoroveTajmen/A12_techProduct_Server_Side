@@ -426,10 +426,36 @@ async function run() {
       res.send(result);
     });
 
+    //get specific product id data
+    app.get("/coupons/:id",  async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await couponsCollection.findOne(query);
+      res.send(result);
+    });
+
     //post new coupon
     app.post("/coupons", async (req, res) => {
       const item = req.body;
       const result = await couponsCollection.insertOne(item);
+      res.send(result);
+    });
+
+    //patch method for specific coupon update
+    app.patch("/updateCoupon/:id", async (req, res) => {
+      const item = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          amount: item.amount,
+          code: item.code,
+          date: item.date,
+          description: item.description,
+      
+        },
+      };
+      const result = await couponsCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
 
