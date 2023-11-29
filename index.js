@@ -421,10 +421,23 @@ async function run() {
     });
 
     //*****Coupons related API *******/
+    app.get("/coupons", async (req, res) => {
+      const result = await couponsCollection.find().toArray();
+      res.send(result);
+    });
+
     //post new coupon
     app.post("/coupons", async (req, res) => {
       const item = req.body;
       const result = await couponsCollection.insertOne(item);
+      res.send(result);
+    });
+
+    //coupon delete api
+    app.delete("/coupon/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await couponsCollection.deleteOne(query);
       res.send(result);
     });
 
