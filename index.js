@@ -8,7 +8,12 @@ const port = process.env.PORT || 5001;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 //middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "https://disgusted-skirt.surge.sh"],
+    credentials: true,
+  })
+);
 
 //access post body and convert into json format
 app.use(express.json());
@@ -95,11 +100,11 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+    app.get("/users/admin/:email",  async (req, res) => {
       const email = req.params.email;
-      if (email !== req.decoded.email) {
-        return res.status(403).send({ message: "forbidden access" });
-      }
+      // if (email !== req.decoded.email) {
+      //   return res.status(403).send({ message: "forbidden access" });
+      // }
 
       const query = { email: email };
       const user = await usersCollection.findOne(query);
@@ -110,11 +115,11 @@ async function run() {
       res.send({ admin });
     });
 
-    app.get("/users/moderator/:email", verifyToken, async (req, res) => {
+    app.get("/users/moderator/:email",  async (req, res) => {
       const email = req.params.email;
-      if (email !== req.decoded.email) {
-        return res.status(403).send({ message: "forbidden access" });
-      }
+      // if (email !== req.decoded.email) {
+      //   return res.status(403).send({ message: "forbidden access" });
+      // }
 
       const query = { email: email };
       const user = await usersCollection.findOne(query);
@@ -471,8 +476,7 @@ async function run() {
         const couponExpirationDate = new Date(coupon.date);
 
         if (currentDate <= couponExpirationDate) {
-          // Calculate the discounted amount (replace this with your actual logic)
-          const discountedAmount = 0.5 * parseFloat(coupon.amount);
+          const discountedAmount = (100 * (1 - (parseFloat(coupon.amount)/100)));
 
           res.json({ valid: true, discountedAmount });
         } else {
