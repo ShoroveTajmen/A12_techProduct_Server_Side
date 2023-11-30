@@ -179,6 +179,7 @@ async function run() {
 
     //******products related api******
     //get featured products by sorting real time
+
     app.get("/products", async (req, res) => {
       const result = await productsCollection
         .find()
@@ -461,27 +462,27 @@ async function run() {
     //post method for get coupon discount
     app.post("/validateCoupon", async (req, res) => {
       const { code } = req.body;
-        // Find the coupon in the database based on the code
-        const coupon = await couponsCollection.findOne({ code });
+      // Find the coupon in the database based on the code
+      const coupon = await couponsCollection.findOne({ code });
 
-        if (coupon) {
-          // Check if the coupon is still valid based on the expiration date or any other criteria
-          const currentDate = new Date();
-          const couponExpirationDate = new Date(coupon.date);
+      if (coupon) {
+        // Check if the coupon is still valid based on the expiration date or any other criteria
+        const currentDate = new Date();
+        const couponExpirationDate = new Date(coupon.date);
 
-          if (currentDate <= couponExpirationDate) {
-            // Calculate the discounted amount (replace this with your actual logic)
-            const discountedAmount = 0.5 * parseFloat(coupon.amount);
+        if (currentDate <= couponExpirationDate) {
+          // Calculate the discounted amount (replace this with your actual logic)
+          const discountedAmount = 0.5 * parseFloat(coupon.amount);
 
-            res.json({ valid: true, discountedAmount });
-          } else {
-            // Coupon has expired
-            res.json({ valid: false, message: "Coupon has expired" });
-          }
+          res.json({ valid: true, discountedAmount });
         } else {
-          // Coupon not found
-          res.json({ valid: false, message: "Invalid coupon code" });
+          // Coupon has expired
+          res.json({ valid: false, message: "Coupon has expired" });
         }
+      } else {
+        // Coupon not found
+        res.json({ valid: false, message: "Invalid coupon code" });
+      }
     });
 
     //coupon delete api
